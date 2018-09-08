@@ -36,9 +36,7 @@ int receive_dim(int sock, int *dim) {
 		printf("Errore in lettura dal socket. Codice di ritorno %d.\n", ret);
 		return 1;
 	}
-	printf("DEBUG: dim = %d\n", *dim);
 	*dim = ntohl(*dim);
-	printf("DEBUG: dim = %d\n", *dim);
 	return 0;
 }
 
@@ -59,7 +57,6 @@ int send_dim(int sock, int dim) {
 	
 	int d = htonl(dim);
     ret = send(sock, (void *) &d, sizeof(d), MSG_NOSIGNAL);
-	printf("DEBUG: dim sent=%d\n", d);
     if (ret < 0 || ret < sizeof(d)){
         printf("Errore in lettura dal socket. Codice di ritorno %d.\n", ret);
         return 1;
@@ -71,7 +68,6 @@ int send_msg(int sock, char *buf) {
     int ret;
 	
     ret = send(sock, (void *) buf, strlen(buf), MSG_NOSIGNAL);
-    printf("DEBUG: dim inviata=%d\n", (int)strlen(buf));
 	if (ret < 0 || ret < strlen(buf)){
         printf("Errore in lettura dal socket. Codice di ritorno %d.\n", ret);
         return 1;

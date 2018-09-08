@@ -16,8 +16,8 @@
  */
  
 // dichiarazione funzioni
-int  client_connect(int , char *);
-void 	create_salt(      char[]);
+int  client_connect(int, 			char *);
+void 	create_salt(                char[]);
  
 int main (int argc, char *argv[]) {
 	
@@ -25,7 +25,6 @@ int main (int argc, char *argv[]) {
 	
 	char action[BUFLEN]; // buffer contenente il comando da eseguire e la risposta del server
 	char 	tmp[BUFLEN]; // buffer di appoggio
-	char 		*arg[2]; // buffer di controllo degli argomenti immessi  
 	char 		salt[2]; // salt per cifrare la password
 	char 	   *ip_addr;
 	
@@ -47,26 +46,23 @@ int main (int argc, char *argv[]) {
 		  get_input(action);
 		  strtok(action, "\n");
 		} while(!strcmp(action, "\n")); // così tolgo il "\n"
-	// controlla il comando ricevuto e i suoi argomenti
-		strcpy(tmp, action);         
-		arg[0] = strtok( tmp, " \n"); // comando vero e proprio
-		arg[1] = strtok(NULL, " \n"); // secondo comando (opzionale)
 		
-	// errori di sintassi 
-		if (((!strcmp(arg[0], "friend") || !strcmp(arg[0], "post")) && arg[1] == NULL) || // casi con più di un parametro
-			(( strcmp(arg[0], "friend") &&  strcmp(arg[0], "post")) && arg[1] != NULL))   // casi con un solo parametro
-		{        
-			printf("Errore, sintassi non corretta. Digita 'help' per maggiori informazioni.\n");
-			continue;
-		}			
-	
+	// controlla il comando ricevuto e i suoi argomenti
+		char *arg[2]; // buffer di controllo degli argomenti immessi  
+		strcpy(tmp, action);         
+		arg[0] = strtok( tmp, " \n"); 
+		arg[1] = strtok(NULL, " \n"); 
+		
 	// caso: register 
 		if (!strcmp(arg[0], "register") && arg[1] == NULL) {
 			char credenziali[BUFLEN];
 			printf("Inserisci il tuo indirizzo di posta elettronica:\n");
-			get_input(credenziali); // registra indirizzo email
+			do { // registra indirizzo email
+				get_input(credenziali);
+				strtok(credenziali, "\n");
+			} while(!strcmp(credenziali, "\n")); 
 			// controlla il comando ricevuto e i suoi argomenti
-			strcpy(tmp, credenziali);         
+			sprintf(tmp, "%s", credenziali);         
 			arg[0] = strtok( tmp, " \n"); 
 			arg[1] = strtok(NULL, " \n"); 
 			if (arg[1] != NULL) {
@@ -75,19 +71,37 @@ int main (int argc, char *argv[]) {
 			}
 			strcat(action,    " ");	// concatena email al 
 			strcat(action, arg[0]); // comando 'register'
+			printf("DEBUG: action=%s\n", action);
 			printf("Scegli la tua password:\n");
-			get_input(credenziali); // registra password
+			do { // registra password	
+				get_input(credenziali);
+				strtok(credenziali, "\n");
+			} while(!strcmp(credenziali, "\n")); 
+			printf("DEBUG: input psw = %s\n", credenziali);
 			// controlla il comando ricevuto e i suoi argomenti
-			strcpy(tmp, credenziali);         
+			sprintf(tmp, "%s", credenziali);         
+			printf("DEBUG: tmp psw = %s\n", tmp);
 			arg[0] = strtok( tmp, " \n"); 
 			arg[1] = strtok(NULL, " \n"); 
+			printf("DEBUG: arg psw = %s\n", arg[0]);
+			printf("DEBUG: arg psw = %s\n", arg[1]);
 			if (arg[1] != NULL) {
 				printf("Errore, inserito più di un parametro. Password non valida.\n");
 				continue;
 			}
+			printf("DEBUG: prima del cat\n");
 			strcat(action, " ");
+			printf("DEBUG: prima del salt\n");
 			create_salt(salt);
-			strcat(action, crypt(arg[0], salt));
+			printf("DEBUG: dopo il salt, che è %s\n", salt);
+			char crypted[BUFLEN];
+			sprintf(crypted, "%s", crypt(arg[0], salt))	;
+			printf("DEBUG: criptata correttamente\n");
+			strcat(action, crypted);
+			printf("DEBUG: action=%s\n", action);
+		} else if (!strcmp(arg[0], "register") && arg[1] != NULL) {
+			printf("Errore, inserito più di un parametro. Indirizzo mail non valido.\n");
+			continue;			
 		}
 		
 	// caso: login 
@@ -96,7 +110,7 @@ int main (int argc, char *argv[]) {
 			printf("Inserisci il tuo nome utente (indirizzo di posta elettronica):\n");
 			get_input(credenziali); // registra indirizzo email
 			// controlla il comando ricevuto e i suoi argomenti
-			strcpy(tmp, credenziali);         
+			sprintf(tmp, "%s", credenziali);         
 			arg[0] = strtok( tmp, " \n"); 
 			arg[1] = strtok(NULL, " \n"); 
 			if (arg[1] != NULL) {
@@ -108,15 +122,18 @@ int main (int argc, char *argv[]) {
 			printf("Inserisci la password:\n");
 			get_input(credenziali); // registra password
 			// controlla il comando ricevuto e i suoi argomenti
-			strcpy(tmp, credenziali);         
-			arg[0] = strtok( tmp, " \n");
-			arg[1] = strtok(NULL, " \n");
+			sprintf(tmp, "%s", credenziali);         
+			arg[0] = strtok( tmp, " \n"); 
+			arg[1] = strtok(NULL, " \n"); 
 			if (arg[1] != NULL) {
 				printf("Errore, inserito più di un parametro. Password non valida.\n");
 				continue;
 			}
 			strcat(action, " ");
 			strcat(action, arg[0]);
+		} else if (!strcmp(arg[0], "login") && arg[1] != NULL) {
+			printf("Errore, inserito più di un parametro. Indirizzo mail non valido.\n");
+			continue;			
 		}
 		
 	// invia comando al server
@@ -126,20 +143,21 @@ int main (int argc, char *argv[]) {
 		if (r) error(ABORT);
 		r = send_msg(sock, action);
 		if (r) error(ABORT);
+		
 	// ricevi risposta del server
 		r = receive_dim(sock, &dim);
 		if (r) error(ABORT);
-		if (dim < BUFLEN) {
+		// if (dim < BUFLEN) {
 			r = receive_msg(sock, action, dim);
 			if (r) error(ABORT);
-		} else {
+		/*}  else {
 			char *lotofposts;
 			lotofposts = malloc(dim*sizeof(lotofposts[0]));
 			r = receive_msg(sock, lotofposts, dim);
 			printf("%s", lotofposts); // stampa lotofposts
 			free(lotofposts);
 			continue;
-		}
+		} */
 	// quit
 		if (!strcmp(action, "server_quit")) { 
 			printf("Sei uscito dal sistema.\n");
@@ -187,11 +205,11 @@ void create_salt(char salt[]) {
 	srand(time(NULL));
 // Genero i caratteri del salt in modo tale che siano stampabili
 	r = rand();
-	r = r % ('z' - '0');
-	salt[0] = '0' + r;
+	r = r % ('z' - 'a');
+	salt[0] = 'a' + r;
 	r = rand();
-	r = r % ('z' - '0');
-	salt[1] = '0' + r;
+	r = r % ('z' - 'a');
+	salt[1] = 'a' + r;
 	
 //	printf("Salt: %c%c\n", salt[0], salt[1]);
 }

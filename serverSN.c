@@ -55,14 +55,13 @@ int main(int argc, char *argv[]) {
 	char *ip_addr;
 
 	// vairabli per il socket di connessione
-	struct sockaddr_in     cl_add;
-    socklen_t          cl_addrlen;
-    int                     cl_sk;
+	struct sockaddr_in cl_add;
+    socklen_t      cl_addrlen;
+    int                 cl_sk;
 	
 	if (argc != 3)
 		error("Errore, inserire: ./sn_server <host remoto> <porta>\n");
 	
-	ip_addr = malloc(sizeof(argv[1]));
 	ip_addr = argv[1];
 	port    = atoi(argv[2]);
 	
@@ -82,7 +81,6 @@ int main(int argc, char *argv[]) {
 			user[i].friend[j] = 0;
 		wall[i].num_post = 0;
 		memset(user[i].email, 0, BUFLEN);
-		// wall[i].post = NULL;
 		sem_init(&user[i].event, 0, 0); // inizializzazione semaforo evento
  		if (pthread_create(&user[i].thread, NULL, handle_req, (void *) &user[i].id))
 			error_t("errore nella creazione\n", i);
@@ -131,8 +129,9 @@ static int server_init(int myport, char *ip_addr)
     memset(&my_addr, 0, sizeof(my_addr));            
     my_addr.sin_family = AF_INET;
     my_addr.sin_port = htons(myport);
-    inet_pton(AF_INET, ip_addr, &my_addr.sin_addr);
-
+    // inet_pton(AF_INET, ip_addr, &my_addr.sin_addr);
+	my_addr.sin_addr.s_addr = INADDR_ANY;
+	
     sk = socket(AF_INET, SOCK_STREAM, 0);
 	if (sk < 0)
 		error("Errore nell'apertura del socket.\n");

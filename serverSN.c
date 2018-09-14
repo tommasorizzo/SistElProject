@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
 	int port, sock, i, j;
 	char *ip_addr;
 
-	// vairabli per il socket di connessione
+	// variabili per il socket di connessione
 	struct sockaddr_in cl_add;
     socklen_t      cl_addrlen;
     int                 cl_sk;

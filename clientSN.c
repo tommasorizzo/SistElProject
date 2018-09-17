@@ -71,34 +71,25 @@ int main (int argc, char *argv[]) {
 			}
 			strcat(action,    " ");	// concatena email al 
 			strcat(action, arg[0]); // comando 'register'
-			printf("DEBUG: action=%s\n", action);
+			// printf("DEBUG: action=%s\n", action);
 			printf("Scegli la tua password:\n");
 			do { // registra password	
 				get_input(credenziali);
 				strtok(credenziali, "\n");
 			} while(!strcmp(credenziali, "\n")); 
-			printf("DEBUG: input psw = %s\n", credenziali);
 			// controlla il comando ricevuto e i suoi argomenti
 			sprintf(tmp, "%s", credenziali);         
-			printf("DEBUG: tmp psw = %s\n", tmp);
 			arg[0] = strtok( tmp, " \n"); 
 			arg[1] = strtok(NULL, " \n"); 
-			printf("DEBUG: arg psw = %s\n", arg[0]);
-			printf("DEBUG: arg psw = %s\n", arg[1]);
 			if (arg[1] != NULL) {
 				printf("Errore, inserito più di un parametro. Password non valida.\n");
 				continue;
 			}
-			printf("DEBUG: prima del cat\n");
 			strcat(action, " ");
-			printf("DEBUG: prima del salt\n");
 			create_salt(salt);
-			printf("DEBUG: dopo il salt, che è %s\n", salt);
 			char crypted[BUFLEN];
 			sprintf(crypted, "%s", crypt(arg[0], salt))	;
-			printf("DEBUG: criptata correttamente\n");
 			strcat(action, crypted);
-			printf("DEBUG: action=%s\n", action);
 		} else if (!strcmp(arg[0], "register") && arg[1] != NULL) {
 			printf("Errore, inserito più di un parametro. Indirizzo mail non valido.\n");
 			continue;			
@@ -138,7 +129,7 @@ int main (int argc, char *argv[]) {
 		
 	// invia comando al server
 		dim = (int) strlen(action);
-		printf("DEBUG: Invio la stringa '%s' (dim. %d)\n", action, dim);
+		// printf("DEBUG: Invio la stringa '%s' (dim. %d)\n", action, dim);
 		r = send_dim(sock, dim);
 		if (r) error(ABORT);
 		r = send_msg(sock, action);

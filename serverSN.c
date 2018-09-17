@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
 	// Accetta la connessione
         cl_addrlen = sizeof(cl_add);
 		memset(&cl_add, 0, cl_addrlen);
-        cl_sk = accept(sock, (struct sockaddr*)&cl_add, &cl_addrlen);
+        cl_sk = 	accept(sock, (struct sockaddr*)&cl_add, &cl_addrlen);
         if (cl_sk < 0) error("MAIN: non è stato possibile accettare il client.\n");
 		printf ("MAIN: connessione stabilita con il client %s:%d\n", inet_ntoa(cl_add.sin_addr), port);
 		
@@ -204,7 +204,6 @@ static void process_req(int id) {
 	while (1) {
 	// ricevi messaggio dal client
 		r = receive_dim(cl_des, &dim);
-		printf("DEBUG: dim received=%d\n", dim);
 		if (r) error(ABORT);
 		r = receive_msg(cl_des, action, dim);
 		if (r) error(ABORT);
@@ -222,7 +221,7 @@ static void process_req(int id) {
 		
 	// caso: register 
 		if (!strcmp(arg[0], "register")) {
-			printf("DEBUG: ricevuto 'register'\n");
+			// printf("DEBUG: ricevuto 'register'\n");
 			if(user[id].logged)
 				strcpy(tosend, "L'utente ha già effettuato il login\n");
 			else {	
@@ -231,21 +230,17 @@ static void process_req(int id) {
 			// apertura file in reading e append
 				file = fopen("users.txt", "a+"); 
 				if (file == NULL) error_t("errore nell'apertura del file\n", id);
-				printf("DEBUG: file aperto\n");
 			// scansiona ogni parola per vedere se già presente
 				while (fgets(utenti, BUFLEN, file) != NULL) {
-					printf("DEBUG: sto scorrendo il file\n");
 					if (strstr(utenti, arg[1]) != NULL) { // già presente
 						strcpy(tosend, "Registrazione fallita, utente già presente.\n"); // per il client
 						break;
 					}
 				}
 				if (strstr(utenti, arg[1]) == NULL) {
-					printf("DEBUG: procedo alla registrazione\n");
 				// procede alla registrazione
 					fprintf(file, "%s %s\n", arg[1], arg[2]);
 					strcpy(tosend, "Registrazione eseguita.\n"); // messaggio per il client
-					printf("DEBUG: da inviare al client:\n%s", tosend);
 				}
 				fclose(file);
 				pthread_mutex_unlock(&glock);
@@ -276,7 +271,6 @@ static void process_req(int id) {
 				while (fgets(utenti, BUFLEN, file)) {
 				// estraggo email e password dalla riga corrente
 					sscanf(utenti, "%s %s", email, pswrd);
-					printf("DEBUG: sto estraendo dal file '%s %s'\n", email, pswrd);
 					if (!strcmp(arg[1], email)) // trovato
 						break;
 				}
@@ -287,7 +281,6 @@ static void process_req(int id) {
 				// estraggo il salt
 					salt[0] = pswrd[0];
 					salt[1] = pswrd[1];
-					printf("DEBUG: salt = %s\n", salt);
 					strcpy(ipass, crypt(arg[2], salt)); // cifro password ricevuta
 					if (strcmp(ipass, pswrd))
 						strcpy(tosend, "Password non corretta!\n"); // per il client
@@ -356,7 +349,6 @@ static void process_req(int id) {
 				strcat(msg, ": \"");	
 				strcat(msg, action+sizeof("post"));
 				strcat(msg, "\"\n");
-				printf("DEBUG: il post è: %s", msg);
 				for (i = 0; i < THREADS; i++) // manda il post agli amici
 					if (user[id].friend[i]) {
 						int np = wall[i].num_post; // posizione del nuovo post nella bacheca dell'amico
@@ -366,7 +358,7 @@ static void process_req(int id) {
 						} else {
 						strcpy(wall[i].post[np], msg);
 						wall[i].num_post++;
-						printf("DEBUG: %s's wall: %s", user[i].email, wall[i].post[np]);
+						// printf("DEBUG: %s's wall: %s", user[i].email, wall[i].post[np]);
 						}
 					}
 				strcpy(tosend, "Post inviato agli amici\n");
@@ -384,7 +376,7 @@ static void process_req(int id) {
 				strcpy(tosend, "Attenzione, eseguire prima il login.\n");
 			else {
 				int np = wall[id].num_post;
-				printf("DEBUG: numero di post da mostrare: %d\n", np);
+				// printf("DEBUG: numero di post da mostrare: %d\n", np);
 				if (!np)
 					strcpy(tosend, "Nessun post da mostrare.\n");
 				else {
@@ -392,7 +384,7 @@ static void process_req(int id) {
 					memset(allposts, 0, sizeof(allposts));
 					for (i = 0; i < np; i++) {
 						strcat(allposts, wall[id].post[i]); // concatena ogni post in allposts
-						printf("DEBUG: %d: %s", i, allposts);
+						// printf("DEBUG: %d: %s", i, allposts);
 					}
 					wall[id].num_post = 0;
 					if (strlen(allposts) > BUFLEN) { // controllo dimensioni buffer

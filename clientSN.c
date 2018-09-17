@@ -138,17 +138,9 @@ int main (int argc, char *argv[]) {
 	// ricevi risposta del server
 		r = receive_dim(sock, &dim);
 		if (r) error(ABORT);
-		// if (dim < BUFLEN) {
-			r = receive_msg(sock, action, dim);
-			if (r) error(ABORT);
-		/*}  else {
-			char *lotofposts;
-			lotofposts = malloc(dim*sizeof(lotofposts[0]));
-			r = receive_msg(sock, lotofposts, dim);
-			printf("%s", lotofposts); // stampa lotofposts
-			free(lotofposts);
-			continue;
-		} */
+		r = receive_msg(sock, action, dim);
+		if (r) error(ABORT);
+
 	// quit
 		if (!strcmp(action, "server_quit")) { 
 			printf("Sei uscito dal sistema.\n");

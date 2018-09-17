@@ -5,70 +5,70 @@
 #include <crypt.h>
 #include <time.h>
 #include <pthread.h>
-#include <semaphore.h> 
+#include <semaphore.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include "LibSN.h"
 
-#define THREADS    4 
+#define THREADS    4
 #define MAX_POSTS 10
 
-/* 
- * Autore: Tommaso Rizzo - settembre 2018 
+/*
+ * Autore: Tommaso Rizzo - settembre 2018
  */
 
 // bacheca: struttura per gestire i post che può vedere ogni client
 struct walls {
-	int       		    num_post; // tiene conto del numero dei post sinora scritti
+	int  num_post; // tiene conto del numero dei post sinora scritti
 	char post[MAX_POSTS][BUFLEN]; // formato da: tm* tm_info + message
 } wall[THREADS];
 
-// struttura proprietaria di ogni client che si connette 
-static struct users { 
-	pthread_t  	 thread; // thread che gestisce il client a lui associato
-	int     	     id; // id del thread
-	sem_t 	      event; // semaforo che risveglia il thread
-	int 		   busy; // variabile che segnala se il thread è occupato
-	int   	  	 logged; // variabile che segnala se l'utente è connesso (dopo procedura di autenticazione)
+// struttura proprietaria di ogni client che si connette
+static struct users {
+	pthread_t    thread; // thread che gestisce il client a lui associato
+	int              id; // id del thread
+	sem_t         event; // semaforo che risveglia il thread
+	int            busy; // variabile che segnala se il thread è occupato
+	int          logged; // variabile che segnala se l'utente è connesso (dopo procedura di autenticazione)
 	char  email[BUFLEN]; // memorizza indirizzo email dell'utente
 	int friend[THREADS]; // 1 se si è amici del client gestito dal thread i-esimo
-	int 	   	   fdes; // file descriptor del client (vale -1 se non è connesso)
+	int            fdes; // file descriptor del client (vale -1 se non è connesso)
 } user[THREADS];
 
 // file 'users.txt' contentente email e password cifrate degli utenti registrati
-static FILE *file; 
+static FILE *file;
 
-static sem_t           freethread; // semaforo per bloccare il main se tutti i thread sono occupati 
+static sem_t           freethread; // semaforo per bloccare il main se tutti i thread sono occupati
 static pthread_mutex_t      glock; // mutex per gestire le variabili globali
 
 
 // dichiarazione funzioni
 static int    server_init(int, char *);
-static void *  handle_req(	   void *);
+static void *  handle_req(     void *);
 static void   process_req(        int);
 static void      cmd_help(     char *);
 static void     cmd_wrong(     char *);
 
 int main(int argc, char *argv[]) {
-	int port, sock, i, j;
+	int  port, sock, i, j;
 	char *ip_addr;
 
 	// variabili per il socket di connessione
 	struct sockaddr_in cl_add;
     socklen_t      cl_addrlen;
     int                 cl_sk;
-	
+
 	if (argc != 3)
 		error("Errore, inserire: ./sn_server <host remoto> <porta>\n");
-	
+
 	ip_addr = argv[1];
 	port    = atoi(argv[2]);
-	
+
 	// inizializzazione del socket
 	sock = server_init(port, ip_addr);
 
-	pthread_mutex_init(&glock, 	NULL); // inizializzazione mutex di global_lock
+	pthread_mutex_init(&glock,  NULL); // inizializzazione mutex di global_lock
 	sem_init(&freethread, 0, THREADS); // inizializzazione semaforo per il main
 
 	// inizializzazione e creazione thread
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
  		printf("THREAD %d: pronto\n", i);
 	}
 	pthread_mutex_unlock(&glock);
-	
+
 	while(1) {
 	// Accetta la connessione
         cl_addrlen = sizeof(cl_add);
@@ -95,10 +95,10 @@ int main(int argc, char *argv[]) {
         cl_sk = 	accept(sock, (struct sockaddr*)&cl_add, &cl_addrlen);
         if (cl_sk < 0) error("MAIN: non è stato possibile accettare il client.\n");
 		printf ("MAIN: connessione stabilita con il client %s:%d\n", inet_ntoa(cl_add.sin_addr), port);
-		
+
 		printf("MAIN: in attesa di un thread libero\n");
 		sem_wait(&freethread); // in attesa di un thread libero
-		
+
 		pthread_mutex_lock(&glock);
 		for(i = 0; i < THREADS; i++)   
 			if (!user[i].busy) // thread libero trovato, è il thread i-esimo
@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
 		user[i].busy = 1;      // thread diventa occupato
 		user[i].fdes = cl_sk;  // passaggio del client file descriptor
 		pthread_mutex_unlock(&glock);
-		
+
 		printf("MAIN: è stato selezionato il thread %d\n", i);
 		sem_post(&user[i].event); // risveglia il thread libero
 
@@ -126,16 +126,15 @@ static int server_init(int myport, char *ip_addr)
     struct sockaddr_in my_addr;
     int sk;
 
-    memset(&my_addr, 0, sizeof(my_addr));            
+    memset(&my_addr, 0, sizeof(my_addr));
     my_addr.sin_family = AF_INET;
     my_addr.sin_port = htons(myport);
-    // inet_pton(AF_INET, ip_addr, &my_addr.sin_addr);
-	my_addr.sin_addr.s_addr = INADDR_ANY;
-	
+    inet_pton(AF_INET, ip_addr, &my_addr.sin_addr);
+
     sk = socket(AF_INET, SOCK_STREAM, 0);
 	if (sk < 0)
 		error("Errore nell'apertura del socket.\n");
-	
+
     if (bind(sk, (struct sockaddr*)&my_addr, sizeof(my_addr)) < 0)
         error("Errore nella procedura di binding.\n");
 
@@ -143,14 +142,14 @@ static int server_init(int myport, char *ip_addr)
         error("Errore nella procedura di listening.\n");
 
     printf ("Indirizzo: %s (Porta: %d)\n",inet_ntoa(my_addr.sin_addr), myport);
-	
+
     return sk;
 }
-	
+
 static void * handle_req(void *tid) {
 	int id = *((int *) tid);
 	int i, cl_des;
-	
+
 	// get socket
 	pthread_mutex_lock(&glock);
 	cl_des = user[id].fdes; // riceve il file descriptor del client
@@ -158,10 +157,10 @@ static void * handle_req(void *tid) {
 
 	while(1) {
 		sem_wait(&user[id].event); // aspetta di essere risvegliato dal main
-		
+
 	// gestione della richiesta del client
 		process_req(id);
-		
+
 	// quit ricevuto
 		close(cl_des); // chiude il socket
 		pthread_mutex_lock(&glock);
@@ -174,12 +173,12 @@ static void * handle_req(void *tid) {
 			user[i].friend[id] = 0; // mutualmente
 		}
 		pthread_mutex_unlock(&glock);
-		
+
 		printf("THREAD %d: task eseguito, pronto per servire una nuova richiesta\n", id);
-		sem_post(&freethread); // segnala al main che il thread è di nuovo libero		
+		sem_post(&freethread); // segnala al main che il thread è di nuovo libero
 	}
-	
-    pthread_exit(NULL);	
+
+    pthread_exit(NULL);
 }
 
 static void process_req(int id) {
@@ -192,7 +191,7 @@ static void process_req(int id) {
 	char utenti[BUFLEN];      // buffer che scansiona il file 'users.txt'
 	char tosend[BUFLEN];	  // buffer per la risposta del server
 	char tmp[BUFLEN]; // buffer di appoggio
-	
+
 	memset(utenti, 0, BUFLEN);
 	memset(action, 0, BUFLEN);
 
@@ -315,7 +314,7 @@ static void process_req(int id) {
 						if (user[id].friend[i]) {
 							strcpy(tosend, "Sei già amico con ");
 							strcat(tosend, arg[1]);
-							strcat(tosend, "\n");
+							strcat(tosend, ".\n");
 						} else {
 							pthread_mutex_lock(&glock);
 							user[id].friend[i] = 1;
@@ -339,7 +338,7 @@ static void process_req(int id) {
 				char   msg[BUFLEN]; // d'appoggio per memorizzare il post
 				char fwall[BUFLEN]; // bacheca piena
 				int full = 0; // numero di amici con la bacheca piena
-				memset(	 msg, 0, BUFLEN);
+				memset(  msg,    0, BUFLEN);
 				memset(fwall, '\0', BUFLEN);
 				time(&rawtime);
 				tm_info = localtime(&rawtime);						
@@ -354,6 +353,8 @@ static void process_req(int id) {
 						int np = wall[i].num_post; // posizione del nuovo post nella bacheca dell'amico
 						if (np == MAX_POSTS) {
 							full++;
+							if (full > 1)
+								strcat(fwall, ", ");
 							strcat(fwall, user[i].email);
 						} else {
 						strcpy(wall[i].post[np], msg);
@@ -361,9 +362,10 @@ static void process_req(int id) {
 						// printf("DEBUG: %s's wall: %s", user[i].email, wall[i].post[np]);
 						}
 					}
-				strcpy(tosend, "Post inviato agli amici\n");
+				strcpy(tosend, "Post inviato agli amici.\n");
 				if (full) {
-					sprintf(tosend + strlen(tosend), "%d amico/i con bacheca piena: %s\n", full, fwall);
+					// concatena a 'tosend' gli amici con la bacheca piena 
+					sprintf(tosend + strlen(tosend), "%d amico/i con bacheca piena: %s.\n", full, fwall);
 				}
 			}
 			pthread_mutex_unlock(&glock);
